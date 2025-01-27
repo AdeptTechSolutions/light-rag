@@ -1,1 +1,2 @@
-# light-rag
+# rag-exp
+RAG Explorations
