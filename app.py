@@ -5,11 +5,11 @@ import streamlit as st
 import textract
 from dotenv import load_dotenv
 from lightrag import LightRAG, QueryParam
-from lightrag.llm import openai_complete_if_cache, openai_embedding
+from lightrag.llm.openai import openai_complete_if_cache, openai_embed
 from lightrag.utils import EmbeddingFunc
 
 st.set_page_config(
-    page_title="Islamic Texts RAG",
+    page_title="Islamic Texts",
     page_icon="📚",
     layout="centered",
     initial_sidebar_state="collapsed",
@@ -37,7 +37,7 @@ async def llm_model_func(
 
 
 async def embedding_func(texts: list[str]) -> np.ndarray:
-    return await openai_embedding(
+    return await openai_embed(
         texts,
         model="text-embedding-004",
         api_key=os.getenv("GEMINI_API_KEY"),
@@ -92,7 +92,7 @@ def process_documents_folder(folder_path):
 
 def main():
     st.markdown(
-        "<h1 style='text-align: center;'>📚 Islamic Texts RAG</h1>",
+        "<h1 style='text-align: center;'>📚 Islamic Texts</h1>",
         unsafe_allow_html=True,
     )
     st.write("")
@@ -104,16 +104,43 @@ def main():
             placeholder="Ask a question about Islamic texts...",
         )
 
-        mode = st.selectbox("Select RAG mode:", ["naive", "local", "global", "hybrid"])
+        # mode = st.selectbox("Select RAG mode:", ["naive", "local", "global", "hybrid"])
+        mode = "hybrid"
 
         submit_button = st.form_submit_button("Generate response")
+
+        custom_prompt = """You are a helpful assistant that provides accurate, informative answers based on the given context.
+
+Follow these guidelines:
+
+1. If the question is COMPLETELY unrelated to the context (e.g., asking about mathematics when the context is about history), append "NO_RELEVANT_SOURCE" to your response.
+2. If the question is even partially related to the topics in the context, provide an answer based on the available information WITHOUT adding "NO_RELEVANT_SOURCE".
+3. If you're unsure about relevance, err on the side of providing an answer without the special token.
+
+Provide a clear, direct answer based on relevant information from the context."""
 
     if submit_button and query:
         with st.spinner("Generating response..."):
             try:
+                context = rag.query(
+                    query, param=QueryParam(mode=mode, only_need_context=True)
+                )
                 answer = rag.query(query, param=QueryParam(mode=mode))
                 st.write("#### Answer")
                 st.write(answer)
+
+                with st.expander("📑 Source Information", expanded=False):
+                    if context:
+                        st.info(
+                            """
+                            **Context**
+                            """
+                        )
+                        st.code(context)
+
+                    else:
+                        st.warning("⚠️ No specific source found for this response.")
+
             except Exception as e:
                 st.error(f"Error generating response: {str(e)}")
 
