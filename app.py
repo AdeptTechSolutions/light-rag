@@ -1,8 +1,8 @@
 import os
 
+import fitz  # PyMuPDF
 import numpy as np
 import streamlit as st
-import textract
 from dotenv import load_dotenv
 from lightrag import LightRAG, QueryParam
 from lightrag.llm.openai import openai_complete_if_cache, openai_embed
@@ -74,19 +74,20 @@ def initialize_rag():
 
 
 def process_documents_folder(folder_path):
-    """Extract text from all supported files in a directory"""
+    """Extract text from PDF files in a directory"""
     all_text = ""
-    supported_extensions = (".pdf", ".txt")
+    supported_extensions = (".pdf",)
 
     for filename in os.listdir(folder_path):
         if filename.lower().endswith(supported_extensions):
             file_path = os.path.join(folder_path, filename)
             try:
-                text_content = textract.process(file_path)
-                all_text += text_content.decode("utf-8") + "\n\n"
-                st.success(f"Successfully processed: {filename}")
+                doc = fitz.open(file_path)
+                for page in doc:
+                    all_text += page.get_text() + "\n"
+                doc.close()
             except Exception as e:
-                st.error(f"Error processing {filename}: {str(e)}")
+                st.error(f"Error processing {filename}: {str(e)})")
     return all_text
 
 

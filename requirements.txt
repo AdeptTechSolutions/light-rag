@@ -36,3 +36,4 @@ tqdm
 transformers
 xxhash
 streamlit
+pymupdf
