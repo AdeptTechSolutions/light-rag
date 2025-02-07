@@ -1,11 +1,16 @@
 import os
 
-import fitz  # PyMuPDF
+import fitz
 import numpy as np
 import streamlit as st
+import textract
 from dotenv import load_dotenv
 from lightrag import LightRAG, QueryParam
-from lightrag.llm.openai import openai_complete_if_cache, openai_embed
+from lightrag.llm.openai import (
+    gpt_4o_mini_complete,
+    openai_complete_if_cache,
+    openai_embed,
+)
 from lightrag.utils import EmbeddingFunc
 
 st.set_page_config(
@@ -45,14 +50,11 @@ async def embedding_func(texts: list[str]) -> np.ndarray:
     )
 
 
-@st.cache_resource
 def initialize_rag():
     rag = LightRAG(
         working_dir=WORKING_DIR,
-        llm_model_func=llm_model_func,
-        embedding_func=EmbeddingFunc(
-            embedding_dim=768, max_token_size=2048, func=embedding_func
-        ),
+        llm_model_func=gpt_4o_mini_complete,
+        embedding_func=openai_embed,
     )
 
     if os.path.exists(BOOKS_DIR):
@@ -86,8 +88,9 @@ def process_documents_folder(folder_path):
                 for page in doc:
                     all_text += page.get_text() + "\n"
                 doc.close()
+                print(f"Successfully processed: {filename}")
             except Exception as e:
-                st.error(f"Error processing {filename}: {str(e)})")
+                print(f"Error processing {filename}: {str(e)}")
     return all_text
 
 
@@ -126,7 +129,9 @@ Provide a clear, direct answer based on relevant information from the context.""
                 context = rag.query(
                     query, param=QueryParam(mode=mode, only_need_context=True)
                 )
-                answer = rag.query(query, param=QueryParam(mode=mode))
+                answer = rag.query(
+                    query, param=QueryParam(mode=mode), prompt=custom_prompt
+                )
                 st.write("#### Answer")
                 st.write(answer)
 
