@@ -37,3 +37,4 @@ transformers
 xxhash
 streamlit
 pymupdf
+cryptography>=49.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
